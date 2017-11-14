@@ -23,7 +23,7 @@ video of a talk where run.Group is described.
 
 ## Examples
 
-### Context-aware functions
+### context.Context
 
 ```go
 ctx, cancel := context.WithCancel(context.Background())
