@@ -1,7 +1,7 @@
 # run
 
-[![GoDoc](https://godoc.org/github.com/oklog/run?status.svg)](https://godoc.org/github.com/oklog/run) 
-[![Build Status](https://travis-ci.org/oklog/run.svg?branch=master)](https://travis-ci.org/oklog/run) 
+[![GoDoc](https://godoc.org/github.com/oklog/run?status.svg)](https://godoc.org/github.com/oklog/run)
+[![Build Status](https://travis-ci.org/oklog/run.svg?branch=master)](https://travis-ci.org/oklog/run)
 [![Go Report Card](https://goreportcard.com/badge/github.com/oklog/run)](https://goreportcard.com/report/github.com/oklog/run)
 [![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/oklog/run/master/LICENSE)
 
@@ -10,12 +10,17 @@ run.Group is a universal mechanism to manage goroutine lifecycles.
 Create a zero-value run.Group, and then add actors to it. Actors are defined as
 a pair of functions: an **execute** function, which should run synchronously;
 and an **interrupt** function, which, when invoked, should cause the execute
-function to return. Finally, invoke Run, which blocks until the first actor
-returns. This general-purpose API allows callers to model pretty much any
-runnable task, and achieve well-defined lifecycle semantics for the group.
+function to return. There are two types of actors (functions): regular and sidecar.
+They differ in how their returns are handled. When a regular
+actor (function) returns, all actors are interrupted unconditionally.
+When a sidecar actor (function) exits, all actors are interrupted only
+if an error is returned. Finally, invoke Run, which blocks until the first regular
+actor returns, or a sidecar actor returns an error. This general-purpose API
+allows callers to model pretty much any runnable task, and achieve well-defined
+lifecycle semantics for the group.
 
-run.Group was written to manage component lifecycles in func main for 
-[OK Log](https://github.com/oklog/oklog). 
+run.Group was written to manage component lifecycles in func main for
+[OK Log](https://github.com/oklog/oklog).
 But it's useful in any circumstance where you need to orchestrate multiple
 goroutines as a unit whole.
 [Click here](https://www.youtube.com/watch?v=LHe1Cb_Ud_M&t=15m45s) to see a
@@ -62,12 +67,12 @@ g.Add(func() error {
 
 ## Comparisons
 
-Package run is somewhat similar to package 
-[errgroup](https://godoc.org/golang.org/x/sync/errgroup), 
+Package run is somewhat similar to package
+[errgroup](https://godoc.org/golang.org/x/sync/errgroup),
 except it doesn't require actor goroutines to understand context semantics.
 
 It's somewhat similar to package
-[tomb.v1](https://godoc.org/gopkg.in/tomb.v1) or 
+[tomb.v1](https://godoc.org/gopkg.in/tomb.v1) or
 [tomb.v2](https://godoc.org/gopkg.in/tomb.v2),
-except it has a much smaller API surface, delegating e.g. staged shutdown of 
+except it has a much smaller API surface, delegating e.g. staged shutdown of
 goroutines to the caller.
