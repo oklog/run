@@ -15,7 +15,10 @@ func SignalHandler(ctx context.Context, signals ...os.Signal) (execute func() er
 	return func() error {
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, signals...)
-			defer signal.Stop(c)
+			defer func() {
+				signal.Stop(c)
+				close(c)
+			}
 			select {
 			case sig := <-c:
 				return SignalError{Signal: sig}
