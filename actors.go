@@ -7,6 +7,18 @@ import (
 	"os/signal"
 )
 
+// ContextHandler returns an actor, i.e. an execute and interrupt func, that
+// terminates with when the parent context is canceled.
+func ContextHandler(ctx context.Context, signals ...os.Signal) (execute func() error, interrupt func(error)) {
+	ctx, cancel := context.WithCancel(ctx)
+	return func() error {
+			<-ctx.Done()
+			return ctx.Err()
+		}, func(error) {
+			cancel()
+		}
+}
+
 // SignalHandler returns an actor, i.e. an execute and interrupt func, that
 // terminates with SignalError when the process receives one of the provided
 // signals, or the parent context is canceled. If no signals are provided,
