@@ -8,7 +8,7 @@ import (
 )
 
 // ContextHandler returns an actor, i.e. an execute and interrupt func, that
-// terminates with when the parent context is canceled.
+// terminates when the provided context is canceled.
 func ContextHandler(ctx context.Context) (execute func() error, interrupt func(error)) {
 	ctx, cancel := context.WithCancel(ctx)
 	return func() error {
@@ -22,7 +22,7 @@ func ContextHandler(ctx context.Context) (execute func() error, interrupt func(e
 // SignalHandler returns an actor, i.e. an execute and interrupt func, that
 // terminates with SignalError when the process receives one of the provided
 // signals, or the parent context is canceled. If no signals are provided,
-// handler will listen for all incoming signals.
+// the actor will terminate on any signal, per [signal.Notify].
 func SignalHandler(ctx context.Context, signals ...os.Signal) (execute func() error, interrupt func(error)) {
 	ctx, cancel := context.WithCancel(ctx)
 	return func() error {
