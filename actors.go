@@ -9,7 +9,7 @@ import (
 
 // ContextHandler returns an actor, i.e. an execute and interrupt func, that
 // terminates with when the parent context is canceled.
-func ContextHandler(ctx context.Context, signals ...os.Signal) (execute func() error, interrupt func(error)) {
+func ContextHandler(ctx context.Context) (execute func() error, interrupt func(error)) {
 	ctx, cancel := context.WithCancel(ctx)
 	return func() error {
 			<-ctx.Done()
