@@ -9,7 +9,8 @@ import (
 
 // SignalHandler returns an actor, i.e. an execute and interrupt func, that
 // terminates with SignalError when the process receives one of the provided
-// signals, or the parent context is canceled.
+// signals, or the parent context is canceled. If no signals are provided,
+// handler will listen for all incoming signals.
 func SignalHandler(ctx context.Context, signals ...os.Signal) (execute func() error, interrupt func(error)) {
 	ctx, cancel := context.WithCancel(ctx)
 	return func() error {
