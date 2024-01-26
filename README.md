@@ -1,7 +1,7 @@
 # run
 
 [![GoDoc](https://godoc.org/github.com/oklog/run?status.svg)](https://godoc.org/github.com/oklog/run) 
-[![Build Status](https://github.com/oklog/run/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/oklog/run/actions/workflows/test.yaml)
+[![test](https://github.com/oklog/run/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/oklog/run/actions/workflows/test.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/oklog/run)](https://goreportcard.com/report/github.com/oklog/run)
 [![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/oklog/run/master/LICENSE)
 
