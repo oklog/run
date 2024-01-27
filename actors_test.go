@@ -57,3 +57,11 @@ func TestSignalError(t *testing.T) {
 		t.Errorf("errors.Is(err, ErrSignal): want %v, have %v", want, have)
 	}
 }
+
+func TestSignalHandlerNil(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var rg Group
+	rg.Add(SignalHandler(ctx, os.Interrupt))
+	cancel()
+	t.Logf("%v", rg.Run())
+}

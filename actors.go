@@ -48,7 +48,8 @@ func SignalHandler(ctx context.Context, signals ...os.Signal) (execute func() er
 type testSigChanKey struct{}
 
 func getTestSigChan(ctx context.Context) <-chan os.Signal {
-	return ctx.Value(testSigChanKey{}).(<-chan os.Signal) // can be nil
+	c, _ := ctx.Value(testSigChanKey{}).(<-chan os.Signal) // can be nil
+	return c
 }
 
 func putTestSigChan(ctx context.Context, c <-chan os.Signal) context.Context {
