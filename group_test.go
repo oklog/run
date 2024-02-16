@@ -1,6 +1,7 @@
 package run
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 func TestZero(t *testing.T) {
 	var g group
 	res := make(chan error)
-	go func() { res <- g.Run() }()
+	go func() { res <- g.run() }()
 	select {
 	case err := <-res:
 		if err != nil {
@@ -23,9 +24,9 @@ func TestZero(t *testing.T) {
 func TestOne(t *testing.T) {
 	myError := errors.New("foobar")
 	var g group
-	g.Add(func() error { return myError }, func(error) {})
+	g.add(func(context.Context) error { return myError }, func() {})
 	res := make(chan error)
-	go func() { res <- g.Run() }()
+	go func() { res <- g.run() }()
 	select {
 	case err := <-res:
 		if want, have := myError, err; want != have {
@@ -39,11 +40,11 @@ func TestOne(t *testing.T) {
 func TestMany(t *testing.T) {
 	interrupt := errors.New("interrupt")
 	var g group
-	g.Add(func() error { return interrupt }, func(error) {})
+	g.add(func(context.Context) error { return interrupt }, func() {})
 	cancel := make(chan struct{})
-	g.Add(func() error { <-cancel; return nil }, func(error) { close(cancel) })
+	g.add(func(context.Context) error { <-cancel; return nil }, func() { close(cancel) })
 	res := make(chan error)
-	go func() { res <- g.Run() }()
+	go func() { res <- g.run() }()
 	select {
 	case err := <-res:
 		if want, have := interrupt, err; want != have {

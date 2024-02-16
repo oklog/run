@@ -1,6 +1,8 @@
 package run
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 )
 
@@ -12,7 +14,7 @@ const (
 type Group struct {
 	runnables []Runnable
 	group     group
-	options   *Options
+	logger    *zap.Logger
 }
 
 // Runnable greatly simplifies the process of propagating graceful shutdown signals
@@ -37,7 +39,7 @@ type Runnable interface {
 	// If an error occurs during the execution, it should return the error.
 	//
 	// This method is REQUIRED.
-	Run() error
+	Run(context.Context) error
 
 	// Close is responsible for gracefully shutting down the component. It takes an error
 	// as an input parameter, which can be used to provide information about the reason for
@@ -46,13 +48,13 @@ type Runnable interface {
 	// successfully closed, it should return nil. If an error occurs during the shutdown
 	// process, it should return the error.
 	//
-	// This method is REQUIRED.
-	Close(error) error
+	// This method is OPTIONAL.
+	Close()
 
 	// Alive assesses whether the Runnable has properly been initialized and is ready to perform.
 	// It does not assess health.
 	//
-	// This method is REQUIRED.
+	// This method is OPTIONAL.
 	Alive() bool
 
 	// Name returns the name of the Runnable.
@@ -64,55 +66,62 @@ type Runnable interface {
 	//
 	// This method is OPTIONAL.
 	Fields() []zap.Field
-
-	// compatibility forces clients to include ForwardCompatibility in their Runnable implementations.
-	// This is so we can make forward compatible changes to the Runnable interface.
-	compatibility()
 }
 
+// New is syntactic sugar for creating a new
+// Group with the provided functional options.
 func New(options ...Option) *Group {
-	defaults := &Options{
+	g := &Group{
 		logger: zap.NewNop(),
 	}
 
 	for _, fn := range options {
-		fn(defaults)
+		fn(g)
 	}
 
-	return &Group{
-		options: defaults,
-	}
+	return g
 }
 
-func (g *Group) Add(condition bool, r Runnable) {
-	if !condition {
+// Add appends each Runnable to the Group if the condition is met.
+func (g *Group) Add(when bool, runnables ...Runnable) {
+	if !when {
 		return
 	}
 
-	logger := g.options.logger.With(append([]zap.Field{zap.String("name", r.Name())}, r.Fields()...)...)
+	for _, r := range runnables {
+		g.add(r)
+	}
+}
+
+func (g *Group) add(r Runnable) {
+	logger := g.logger.With(append([]zap.Field{zap.String("name", r.Name())}, r.Fields()...)...)
 	g.runnables = append(g.runnables, r)
 
-	g.group.Add(func() error {
+	g.group.add(func(ctx context.Context) error {
 		logger.Info("starting runnable")
 		defer func() {
 			logger.Info("stopped runnable")
 		}()
 
-		return r.Run()
-	}, func(err error) {
+		return r.Run(ctx)
+	}, func() {
 		logger.Info("closing runnable")
 		defer func() {
 			logger.Info("stopping runnable")
 		}()
 
-		r.Close(err)
+		r.Close()
 	})
 }
 
+// Run all Runnables concurrently. When the first Runnable returns,
+// all others are interrupted. Run returns when all Runnables have
+// exited. The first encountered error is returned.
 func (g *Group) Run() error {
-	return g.group.Run()
+	return g.group.run()
 }
 
+// Alive asseses the liveness of all registered Runnables.
 func (g *Group) Alive() bool {
 	for _, r := range g.runnables {
 		if !r.Alive() {
