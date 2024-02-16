@@ -48,18 +48,12 @@ type Runnable interface {
 
 	// Alive assesses whether the Runnable has properly been initialized and is ready to perform.
 	// It does not assess health.
-	//
-	// This method is OPTIONAL.
 	Alive() bool
 
 	// Name returns the name of the Runnable.
-	//
-	// This method is OPTIONAL.
 	Name() string
 
-	// Fields returns the log fields of the Runnable.
-	//
-	// This method is OPTIONAL.
+	// Fields allows clients to attach additional fields to every log message this library produces.
 	Fields() []slog.Attr
 }
 
@@ -67,7 +61,7 @@ type Runnable interface {
 // Group with the provided functional options.
 func New(options ...Option) *Group {
 	defaults := []Option{
-		WithLogger(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})),
+		WithLogger(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))),
 	}
 
 	g := &Group{}

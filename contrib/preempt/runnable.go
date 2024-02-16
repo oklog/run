@@ -1,4 +1,4 @@
-package runnables
+package preempt
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type preempt struct {
 	run.ForwardCompatibility
 }
 
-func Preempt(after time.Duration) run.Runnable {
+func New(after time.Duration) run.Runnable {
 	return &preempt{
 		after: after,
 	}

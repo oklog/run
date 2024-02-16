@@ -1,4 +1,4 @@
-package runnables
+package process
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type process struct {
 	run.ForwardCompatibility
 }
 
-func Process(signals ...os.Signal) run.Runnable {
+func New(signals ...os.Signal) run.Runnable {
 	if len(signals) == 0 {
 		signals = append(signals, os.Interrupt, syscall.SIGTERM)
 	}

@@ -4,8 +4,9 @@ import "log/slog"
 
 type Option func(*Group)
 
-func WithLogger(handler slog.Handler) Option {
+// WithLogger is a functional option for setting the logger.
+func WithLogger(logger *slog.Logger) Option {
 	return func(o *Group) {
-		o.logger = slog.New(handler)
+		o.logger = logger
 	}
 }

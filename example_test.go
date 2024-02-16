@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"github.com/superblocksteam/run"
-	"github.com/superblocksteam/run/runnables"
+	"github.com/superblocksteam/run/contrib/preempt"
+	"github.com/superblocksteam/run/contrib/process"
 )
 
 func Example_run() {
-	run.Add(true, runnables.Process())
-	run.Add(true, runnables.Preempt(5*time.Second))
+	run.Add(true, process.New())
+	run.Add(true, preempt.New(5*time.Second))
 
 	if err := run.Run(); err != nil {
 		panic(err)
