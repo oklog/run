@@ -83,6 +83,10 @@ func (g *Group) Add(when bool, runnables ...Runnable) {
 	}
 }
 
+func (g *Group) Always(runnables ...Runnable) {
+	g.Add(true, runnables...)
+}
+
 func (g *Group) add(r Runnable) {
 	logger := g.logger.With(fields(append([]slog.Attr{slog.String("name", r.Name())}, r.Fields()...))...)
 	g.runnables = append(g.runnables, r)

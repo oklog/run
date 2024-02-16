@@ -2,6 +2,10 @@ package run
 
 var singleton *Group = New()
 
+func Always(runnables ...Runnable) {
+	singleton.Always(runnables...)
+}
+
 func Add(when bool, runnables ...Runnable) {
 	singleton.Add(when, runnables...)
 }
