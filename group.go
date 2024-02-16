@@ -1,11 +1,8 @@
-// Package run implements an actor-runner with deterministic teardown. It is
-// somewhat similar to package errgroup, except it does not require actor
-// goroutines to understand context semantics. This makes it suitable for use in
-// more circumstances; for example, goroutines which are handling connections
-// from net.Listeners, or scanning input from a closable io.Reader.
 package run
 
-import "context"
+import (
+	"context"
+)
 
 // group collects actors (functions) and runs them concurrently.
 // When one actor (function) returns, all actors are interrupted.

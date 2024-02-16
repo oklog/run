@@ -1,11 +1,11 @@
 package run
 
-import "go.uber.org/zap"
+import "log/slog"
 
 type Option func(*Group)
 
-func WithLogger(logger *zap.Logger) Option {
+func WithLogger(handler slog.Handler) Option {
 	return func(o *Group) {
-		o.logger = logger
+		o.logger = slog.New(handler)
 	}
 }

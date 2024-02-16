@@ -2,19 +2,14 @@ package run
 
 import (
 	"context"
-
-	"go.uber.org/zap"
-)
-
-const (
-	Always = true
-	Never  = false
+	"log/slog"
+	"os"
 )
 
 type Group struct {
 	runnables []Runnable
 	group     group
-	logger    *zap.Logger
+	logger    *slog.Logger
 }
 
 // Runnable greatly simplifies the process of propagating graceful shutdown signals
@@ -65,17 +60,18 @@ type Runnable interface {
 	// Fields returns the log fields of the Runnable.
 	//
 	// This method is OPTIONAL.
-	Fields() []zap.Field
+	Fields() []slog.Attr
 }
 
 // New is syntactic sugar for creating a new
 // Group with the provided functional options.
 func New(options ...Option) *Group {
-	g := &Group{
-		logger: zap.NewNop(),
+	defaults := []Option{
+		WithLogger(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})),
 	}
 
-	for _, fn := range options {
+	g := &Group{}
+	for _, fn := range append(defaults, options...) {
 		fn(g)
 	}
 
@@ -94,20 +90,20 @@ func (g *Group) Add(when bool, runnables ...Runnable) {
 }
 
 func (g *Group) add(r Runnable) {
-	logger := g.logger.With(append([]zap.Field{zap.String("name", r.Name())}, r.Fields()...)...)
+	logger := g.logger.With(fields(append([]slog.Attr{slog.String("name", r.Name())}, r.Fields()...))...)
 	g.runnables = append(g.runnables, r)
 
 	g.group.add(func(ctx context.Context) error {
-		logger.Info("starting runnable")
+		logger.Info("started", "method", "run")
 		defer func() {
-			logger.Info("stopped runnable")
+			logger.Info("returned", "method", "run")
 		}()
 
 		return r.Run(ctx)
 	}, func() {
-		logger.Info("closing runnable")
+		logger.Info("started", "method", "close")
 		defer func() {
-			logger.Info("stopping runnable")
+			logger.Info("returned", "method", "close")
 		}()
 
 		r.Close()
@@ -130,4 +126,14 @@ func (g *Group) Alive() bool {
 	}
 
 	return true
+}
+
+func fields(attr []slog.Attr) []any {
+	out := make([]any, 0, len(attr)*2)
+
+	for _, a := range attr {
+		out = append(out, a.Key, a.Value.Any())
+	}
+
+	return out
 }
