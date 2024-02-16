@@ -5,10 +5,10 @@
 // from net.Listeners, or scanning input from a closable io.Reader.
 package run
 
-// Group collects actors (functions) and runs them concurrently.
+// group collects actors (functions) and runs them concurrently.
 // When one actor (function) returns, all actors are interrupted.
 // The zero value of a Group is useful.
-type Group struct {
+type group struct {
 	actors []actor
 }
 
@@ -18,7 +18,7 @@ type Group struct {
 //
 // The first actor (function) to return interrupts all running actors.
 // The error is passed to the interrupt functions, and is returned by Run.
-func (g *Group) Add(execute func() error, interrupt func(error)) {
+func (g *group) Add(execute func() error, interrupt func(error)) {
 	g.actors = append(g.actors, actor{execute, interrupt})
 }
 
@@ -26,7 +26,7 @@ func (g *Group) Add(execute func() error, interrupt func(error)) {
 // When the first actor returns, all others are interrupted.
 // Run only returns when all actors have exited.
 // Run returns the error returned by the first exiting actor.
-func (g *Group) Run() error {
+func (g *group) Run() error {
 	if len(g.actors) == 0 {
 		return nil
 	}

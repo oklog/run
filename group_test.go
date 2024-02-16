@@ -1,15 +1,13 @@
-package run_test
+package run
 
 import (
 	"errors"
 	"testing"
 	"time"
-
-	"github.com/oklog/run"
 )
 
 func TestZero(t *testing.T) {
-	var g run.Group
+	var g group
 	res := make(chan error)
 	go func() { res <- g.Run() }()
 	select {
@@ -24,7 +22,7 @@ func TestZero(t *testing.T) {
 
 func TestOne(t *testing.T) {
 	myError := errors.New("foobar")
-	var g run.Group
+	var g group
 	g.Add(func() error { return myError }, func(error) {})
 	res := make(chan error)
 	go func() { res <- g.Run() }()
@@ -40,7 +38,7 @@ func TestOne(t *testing.T) {
 
 func TestMany(t *testing.T) {
 	interrupt := errors.New("interrupt")
-	var g run.Group
+	var g group
 	g.Add(func() error { return interrupt }, func(error) {})
 	cancel := make(chan struct{})
 	g.Add(func() error { <-cancel; return nil }, func(error) { close(cancel) })
