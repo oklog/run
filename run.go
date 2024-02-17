@@ -1,3 +1,4 @@
+// Package run does something.
 package run
 
 import (
@@ -6,54 +7,38 @@ import (
 	"os"
 )
 
+// Group manages a collection of Runnables.
 type Group struct {
 	runnables []Runnable
 	group     group
 	logger    *slog.Logger
 }
 
-// Runnable greatly simplifies the process of propagating graceful shutdown signals
-// between multiple components within a Go program. By implementing the Runnable
-// interface for each component, it becomes easy to manage and orchestrate their
-// execution and termination in a clean and deterministic manner. When a Runnable
-// component (e.g., Runnable A) needs to exit, the Close method can be called with
-// an appropriate error or reason for the shutdown. This makes it straightforward to
-// inform all other Runnable components that they also need to shut down gracefully.
-// The caller can then iterate through all the components, calling their respective
-// Close methods, and ensuring that each component is aware of the shutdown signal
-// and can perform the necessary cleanup and resource release.
-//
-// This approach promotes a clean and organized shutdown process, allowing for better
-// resource management and error handling. By using the Runnable interface, developers
-// can create more robust and maintainable Go programs, with clear and deterministic
-// control over the lifecycle of each component.
 type Runnable interface {
-	// Run is responsible for starting the execution of the component. It should contain
-	// the main logic of the component and is expected to run until an error occurs or
-	// the component is stopped. If the component runs successfully, it should return nil.
-	// If an error occurs during the execution, it should return the error.
-	//
-	// This method is REQUIRED.
+	// Run is responsible for executing the main logic of the component
+	// and is expected to run until it needs to shut down. Cancellation
+	// of the provided context signals that the component should shut down
+	// gracefully. If the Runnable implements the Close method than this
+	// context can be ignored.
 	Run(context.Context) error
 
-	// Close is responsible for gracefully shutting down the component. It takes an error
-	// as an input parameter, which can be used to provide information about the reason for
-	// the shutdown. The Close method should ensure that all resources used by the component
-	// are properly released and any necessary cleanup is performed. If the component is
-	// successfully closed, it should return nil. If an error occurs during the shutdown
-	// process, it should return the error.
-	//
-	// This method is OPTIONAL.
+	// Close is responsible for gracefully shutting down the component. It
+	// can either initiate the shutdown process and return or wait for the
+	// shutdown process to complete before returning. This method should
+	// ensure that all resources used by the component are properly released
+	// and any necessary cleanup is performed. If this method is not implemented
+	// it is expected that the Run method properly handle context cancellation.
 	Close()
 
-	// Alive assesses whether the Runnable has properly been initialized and is ready to perform.
-	// It does not assess health.
+	// Alive assesses whether the Runnable has
+	// properly been initialized and is active.
 	Alive() bool
 
 	// Name returns the name of the Runnable.
 	Name() string
 
-	// Fields allows clients to attach additional fields to every log message this library produces.
+	// Fields allows clients to attach additional fields
+	// to every log message this library produces.
 	Fields() []slog.Attr
 }
 
@@ -61,7 +46,15 @@ type Runnable interface {
 // Group with the provided functional options.
 func New(options ...Option) *Group {
 	defaults := []Option{
-		WithLogger(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))),
+		WithLogger(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+				if a.Key == slog.TimeKey {
+					return slog.Attr{}
+				}
+
+				return a
+			},
+		}))),
 	}
 
 	g := &Group{}
@@ -72,7 +65,7 @@ func New(options ...Option) *Group {
 	return g
 }
 
-// Add appends each Runnable to the Group if the condition is met.
+// Add appends each Runnable to the group if the condition is met.
 func (g *Group) Add(when bool, runnables ...Runnable) {
 	if !when {
 		return
@@ -83,39 +76,52 @@ func (g *Group) Add(when bool, runnables ...Runnable) {
 	}
 }
 
+// Always adds each Runnable to the group.
 func (g *Group) Always(runnables ...Runnable) {
 	g.Add(true, runnables...)
 }
 
 func (g *Group) add(r Runnable) {
-	logger := g.logger.With(fields(append([]slog.Attr{slog.String("name", r.Name())}, r.Fields()...))...)
+	logger := g.logger.With(
+		anything(append([]slog.Attr{
+			slog.String("name", r.Name()),
+		}, r.Fields()...))...,
+	)
+
 	g.runnables = append(g.runnables, r)
 
 	g.group.add(func(ctx context.Context) error {
-		logger.Info("started", "method", "run")
+		logger.Info("started", slog.String("method", "run"))
 		defer func() {
-			logger.Info("returned", "method", "run")
+			logger.Info("returned", slog.String("method", "run"))
 		}()
 
 		return r.Run(ctx)
 	}, func() {
-		logger.Info("started", "method", "close")
+		logger.Info("started", slog.String("method", "close"))
 		defer func() {
-			logger.Info("returned", "method", "close")
+			logger.Info("returned", slog.String("method", "close"))
 		}()
 
 		r.Close()
 	})
 }
 
-// Run all Runnables concurrently. When the first Runnable returns,
-// all others are interrupted. Run returns when all Runnables have
-// exited. The first encountered error is returned.
+// Run invokes and manages all registered Runnables.
+//
+//  1. Invoke Run on each Runnable concurrently.
+//  2. Wait for the first Runnable to return.
+//  3. Cancel the context passed to Run.
+//  4. Invoke Close on each Runnable concurrently.
+//  5. Wait for all Close methods to return.
+//  6. Wait for all Run methods to return.
+//
+// It returns the initial error.
 func (g *Group) Run() error {
 	return g.group.run()
 }
 
-// Alive asseses the liveness of all registered Runnables.
+// Alive assess the liveness of all registered Runnables.
 func (g *Group) Alive() bool {
 	for _, r := range g.runnables {
 		if !r.Alive() {
@@ -126,11 +132,11 @@ func (g *Group) Alive() bool {
 	return true
 }
 
-func fields(attr []slog.Attr) []any {
-	out := make([]any, 0, len(attr)*2)
+func anything[T any](data []T) []any {
+	out := make([]any, len(data))
 
-	for _, a := range attr {
-		out = append(out, a.Key, a.Value.Any())
+	for i, v := range data {
+		out[i] = v
 	}
 
 	return out

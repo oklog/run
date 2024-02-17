@@ -47,7 +47,7 @@ func (g *group) run() error {
 	cancel()
 
 	// Notify Close() that it needs to stop.
-	close := make(chan struct{})
+	close := make(chan struct{}, len(g.actors))
 	for _, a := range g.actors {
 		go func(a actor) {
 			a.interrupt()
