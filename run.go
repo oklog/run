@@ -5,13 +5,19 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
+)
+
+var (
+	defaultLogger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
 )
 
 // Group manages a collection of Runnables.
 type Group struct {
-	runnables []Runnable
-	group     group
-	logger    *slog.Logger
+	runnables    []Runnable
+	group        group
+	logger       *slog.Logger
+	closeTimeout time.Duration
 }
 
 type Runnable interface {
@@ -28,7 +34,7 @@ type Runnable interface {
 	// ensure that all resources used by the component are properly released
 	// and any necessary cleanup is performed. If this method is not implemented
 	// it is expected that the Run method properly handle context cancellation.
-	Close()
+	Close(context.Context) error
 
 	// Alive assesses whether the Runnable has
 	// properly been initialized and is active.
@@ -46,21 +52,15 @@ type Runnable interface {
 // Group with the provided functional options.
 func New(options ...Option) *Group {
 	defaults := []Option{
-		WithLogger(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
-				if a.Key == slog.TimeKey {
-					return slog.Attr{}
-				}
-
-				return a
-			},
-		}))),
+		WithLogger(defaultLogger),
 	}
 
 	g := &Group{}
 	for _, fn := range append(defaults, options...) {
 		fn(g)
 	}
+
+	g.group.closeTimeout = g.closeTimeout
 
 	return g
 }
@@ -82,6 +82,11 @@ func (g *Group) Always(runnables ...Runnable) {
 }
 
 func (g *Group) add(r Runnable) {
+	// In case clients do not use the New function to create a new Group.
+	if g.logger == nil {
+		g.logger = defaultLogger
+	}
+
 	logger := g.logger.With(
 		anything(append([]slog.Attr{
 			slog.String("name", r.Name()),
@@ -91,20 +96,23 @@ func (g *Group) add(r Runnable) {
 	g.runnables = append(g.runnables, r)
 
 	g.group.add(func(ctx context.Context) error {
-		logger.Info("started", slog.String("method", "run"))
-		defer func() {
-			logger.Info("returned", slog.String("method", "run"))
-		}()
-
-		return r.Run(ctx)
-	}, func() {
-		logger.Info("started", slog.String("method", "close"))
-		defer func() {
-			logger.Info("returned", slog.String("method", "close"))
-		}()
-
-		r.Close()
+		return do(ctx, r.Run, logger.With(slog.String("method", "run")))
+	}, func(ctx context.Context) error {
+		return do(ctx, r.Close, logger.With(slog.String("method", "close")))
 	})
+}
+
+func do(ctx context.Context, fn func(context.Context) error, logger *slog.Logger) error {
+	logger.Info("started")
+
+	if err := fn(ctx); err != nil {
+		logger.Error("failed", slog.String("error", err.Error()))
+		return err
+	}
+
+	logger.Info("returned")
+
+	return nil
 }
 
 // Run invokes and manages all registered Runnables.

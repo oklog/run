@@ -2,13 +2,15 @@ package run
 
 import (
 	"context"
+	"time"
 )
 
 // group collects actors (functions) and runs them concurrently.
 // When one actor (function) returns, all actors are interrupted.
 // The zero value of a Group is useful.
 type group struct {
-	actors []actor
+	actors       []actor
+	closeTimeout time.Duration
 }
 
 // Add an actor (function) to the group. Each actor must be pre-emptable by an
@@ -17,7 +19,7 @@ type group struct {
 //
 // The first actor (function) to return interrupts all running actors.
 // The error is passed to the interrupt functions, and is returned by Run.
-func (g *group) add(execute func(context.Context) error, interrupt func()) {
+func (g *group) add(execute func(context.Context) error, interrupt func(context.Context) error) {
 	g.actors = append(g.actors, actor{execute, interrupt})
 }
 
@@ -46,11 +48,18 @@ func (g *group) run() error {
 	// Notify Run() that is needs to stop.
 	cancel()
 
+	if g.closeTimeout == 0 {
+		ctx = context.Background()
+	} else {
+		ctx, cancel = context.WithTimeout(context.Background(), g.closeTimeout)
+		defer cancel()
+	}
+
 	// Notify Close() that it needs to stop.
 	close := make(chan struct{}, len(g.actors))
 	for _, a := range g.actors {
 		go func(a actor) {
-			a.interrupt()
+			a.interrupt(ctx)
 			close <- struct{}{}
 		}(a)
 	}
@@ -71,5 +80,5 @@ func (g *group) run() error {
 
 type actor struct {
 	execute   func(context.Context) error
-	interrupt func()
+	interrupt func(context.Context) error
 }

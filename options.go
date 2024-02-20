@@ -1,6 +1,9 @@
 package run
 
-import "log/slog"
+import (
+	"log/slog"
+	"time"
+)
 
 type Option func(*Group)
 
@@ -8,5 +11,12 @@ type Option func(*Group)
 func WithLogger(logger *slog.Logger) Option {
 	return func(o *Group) {
 		o.logger = logger
+	}
+}
+
+// WithCloseTimeout
+func WithCloseTimeout(duration time.Duration) Option {
+	return func(o *Group) {
+		o.closeTimeout = duration
 	}
 }
