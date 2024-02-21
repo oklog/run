@@ -26,6 +26,10 @@ type Runnable interface {
 	// of the provided context signals that the component should shut down
 	// gracefully. If the Runnable implements the Close method than this
 	// context can be ignored.
+	//
+	// Implementations must insure that instantiations of things to be
+	// shutdown do not leak outside of this method (i.e. a constructor
+	// calling net.Listen) as the Close method may not be called.
 	Run(context.Context) error
 
 	// Close is responsible for gracefully shutting down the component. It

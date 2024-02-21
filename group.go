@@ -32,46 +32,54 @@ func (g *group) run() error {
 		return nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	runCtx, runCancel := context.WithCancel(context.Background())
 
 	// Run each actor.
-	run := make(chan error, len(g.actors))
+	runCh := make(chan error, len(g.actors))
+	defer close(runCh)
+
 	for _, a := range g.actors {
 		go func(a actor) {
-			run <- a.execute(ctx)
+			runCh <- a.execute(runCtx)
 		}(a)
 	}
 
 	// Wait for the first actor to stop.
-	err := <-run
+	err := <-runCh
 
 	// Notify Run() that is needs to stop.
-	cancel()
+	runCancel()
 
-	if g.closeTimeout == 0 {
-		ctx = context.Background()
-	} else {
-		ctx, cancel = context.WithTimeout(context.Background(), g.closeTimeout)
-		defer cancel()
+	var closeCtx context.Context
+	{
+		if g.closeTimeout == 0 {
+			closeCtx = context.Background()
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), g.closeTimeout)
+			defer cancel()
+			closeCtx = ctx
+		}
 	}
 
 	// Notify Close() that it needs to stop.
-	close := make(chan struct{}, len(g.actors))
+	closeCh := make(chan struct{}, len(g.actors))
+	defer close(closeCh)
+
 	for _, a := range g.actors {
 		go func(a actor) {
-			a.interrupt(ctx)
-			close <- struct{}{}
+			a.interrupt(closeCtx)
+			closeCh <- struct{}{}
 		}(a)
 	}
 
 	// Wait for all Close() to stop.
-	for i := 1; i < cap(close); i++ {
-		<-close
+	for i := 0; i < cap(closeCh); i++ {
+		<-closeCh
 	}
 
 	// Wait for all actors to stop.
-	for i := 1; i < cap(run); i++ {
-		<-run
+	for i := 1; i < cap(runCh); i++ {
+		<-runCh
 	}
 
 	// Return the original error.
