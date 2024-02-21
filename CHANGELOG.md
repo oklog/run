@@ -18,3 +18,9 @@
 
 - Fixed syntax error in `group_test.go`.
 - Wait until `n` messages come across `closeCh`, not `n-1`. This was a copy/paste issue.
+
+## [0.0.3] - 2024-02-21
+
+### Changed
+
+- Renamed the `contrib/waitgroup` constructor.
