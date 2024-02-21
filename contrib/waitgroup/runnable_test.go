@@ -10,13 +10,13 @@ import (
 )
 
 func TestWaitAlive(t *testing.T) {
-	assert.True(t, NewWait(&sync.WaitGroup{}).Alive())
+	assert.True(t, New(&sync.WaitGroup{}).Alive())
 }
 
 func TestWait(t *testing.T) {
 	wg := sync.WaitGroup{}
 	done := make(chan struct{})
-	runnable := NewWait(&wg)
+	runnable := New(&wg)
 
 	go func() {
 		runnable.Run(context.Background())
@@ -30,6 +30,6 @@ func TestWait(t *testing.T) {
 	}()
 
 	time.Sleep(50 * time.Millisecond) // Ensure goroutine has time to execute
-	runnable.Close(nil)
+	runnable.Close(context.Background())
 	<-done
 }
