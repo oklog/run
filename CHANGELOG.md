@@ -1,10 +1,16 @@
 # Changelog
 
-## [0.0.1] - 2024-02-20
+## [0.0.4] - 2024-03-31
 
 ### Added
 
-- Initial release.
+- Added `contrib/ticker`.
+
+## [0.0.3] - 2024-02-21
+
+### Changed
+
+- Renamed the `contrib/waitgroup` constructor.
 
 ## [0.0.2] - 2024-02-21
 
@@ -19,8 +25,8 @@
 - Fixed syntax error in `group_test.go`.
 - Wait until `n` messages come across `closeCh`, not `n-1`. This was a copy/paste issue.
 
-## [0.0.3] - 2024-02-21
+## [0.0.1] - 2024-02-20
 
-### Changed
+### Added
 
-- Renamed the `contrib/waitgroup` constructor.
+- Initial release.
