@@ -20,3 +20,10 @@ func WithCloseTimeout(duration time.Duration) Option {
 		o.closeTimeout = duration
 	}
 }
+
+// WithOrderedShutdown
+func WithOrderedShutdown() Option {
+	return func(o *Group) {
+		o.orderedShutdown = true
+	}
+}

@@ -14,10 +14,11 @@ var (
 
 // Group manages a collection of Runnables.
 type Group struct {
-	runnables    []Runnable
-	group        group
-	logger       *slog.Logger
-	closeTimeout time.Duration
+	runnables       []Runnable
+	group           group
+	logger          *slog.Logger
+	closeTimeout    time.Duration
+	orderedShutdown bool
 }
 
 type Runnable interface {
@@ -65,6 +66,7 @@ func New(options ...Option) *Group {
 	}
 
 	g.group.closeTimeout = g.closeTimeout
+	g.group.orderedShutdown = g.orderedShutdown
 
 	return g
 }
