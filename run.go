@@ -14,11 +14,11 @@ var (
 
 // Group manages a collection of Runnables.
 type Group struct {
-	runnables       []Runnable
-	group           group
-	logger          *slog.Logger
-	closeTimeout    time.Duration
-	orderedShutdown bool
+	runnables    []Runnable
+	group        group
+	logger       *slog.Logger
+	closeTimeout time.Duration
+	syncShutdown bool
 }
 
 type Runnable interface {
@@ -39,6 +39,8 @@ type Runnable interface {
 	// ensure that all resources used by the component are properly released
 	// and any necessary cleanup is performed. If this method is not implemented
 	// it is expected that the Run method properly handle context cancellation.
+	// If using `WithSyncShutdown`, it is advised to implement this method so
+	// to control when to move on to the next Runnable during shutdown.
 	Close(context.Context) error
 
 	// Alive assesses whether the Runnable has
@@ -66,7 +68,7 @@ func New(options ...Option) *Group {
 	}
 
 	g.group.closeTimeout = g.closeTimeout
-	g.group.orderedShutdown = g.orderedShutdown
+	g.group.syncShutdown = g.syncShutdown
 
 	return g
 }

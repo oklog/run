@@ -9,9 +9,9 @@ import (
 // When one actor (function) returns, all actors are interrupted.
 // The zero value of a Group is useful.
 type group struct {
-	actors          []actor
-	closeTimeout    time.Duration
-	orderedShutdown bool
+	actors       []actor
+	closeTimeout time.Duration
+	syncShutdown bool
 }
 
 // Add an actor (function) to the group. Each actor must be pre-emptable by an
@@ -74,7 +74,7 @@ func (g *group) run() error {
 			closeCh <- struct{}{}
 		}
 
-		if g.orderedShutdown {
+		if g.syncShutdown {
 			shutdown(a)
 		} else {
 			go shutdown(a)
