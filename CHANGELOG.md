@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.0.5] - 2024-05-08
+
+### Added
+
+- Added support for ordered shutdown.
+
 ## [0.0.4] - 2024-03-31
 
 ### Added
