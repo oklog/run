@@ -20,3 +20,11 @@ func WithCloseTimeout(duration time.Duration) Option {
 		o.closeTimeout = duration
 	}
 }
+
+// WithSyncShutdown ensures that a Runnable's Close method
+// returns before shutting down the next Runnable.
+func WithSyncShutdown() Option {
+	return func(o *Group) {
+		o.syncShutdown = true
+	}
+}

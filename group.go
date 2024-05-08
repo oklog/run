@@ -11,6 +11,7 @@ import (
 type group struct {
 	actors       []actor
 	closeTimeout time.Duration
+	syncShutdown bool
 }
 
 // Add an actor (function) to the group. Each actor must be pre-emptable by an
@@ -66,10 +67,18 @@ func (g *group) run() error {
 	defer close(closeCh)
 
 	for _, a := range g.actors {
-		go func(a actor) {
+		a := a // NOTE(frank): May not need this anymore in go1.22.
+
+		shutdown := func(a actor) {
 			a.interrupt(closeCtx)
 			closeCh <- struct{}{}
-		}(a)
+		}
+
+		if g.syncShutdown {
+			shutdown(a)
+		} else {
+			go shutdown(a)
+		}
 	}
 
 	// Wait for all Close() to stop.
