@@ -44,7 +44,9 @@ func (g *Group) Run() error {
 
 	// Signal all actors to stop.
 	for _, a := range g.actors {
-		a.interrupt(err)
+		if a.interrupt != nil {
+			a.interrupt(err)
+		}
 	}
 
 	// Wait for all actors to stop.
@@ -55,6 +57,9 @@ func (g *Group) Run() error {
 	// Return the original error.
 	return err
 }
+
+// NilInterrupt is an alias for `func(error) {}`, meaning an empty interrupt function
+var NilInterrupt = func(error) {}
 
 type actor struct {
 	execute   func() error

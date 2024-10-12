@@ -55,3 +55,21 @@ func TestMany(t *testing.T) {
 		t.Errorf("timeout")
 	}
 }
+
+func TestNilInterrupt(t *testing.T) {
+	interrupt := errors.New("interrupt")
+	var g run.Group
+	g.Add(func() error { return interrupt }, func(error) {})
+	g.Add(func() error { return interrupt }, nil)
+	g.Add(func() error { return interrupt }, run.NilInterrupt)
+	res := make(chan error)
+	go func() { res <- g.Run() }()
+	select {
+	case err := <-res:
+		if want, have := interrupt, err; want != have {
+			t.Errorf("want %v, have %v", want, have)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Error("timeout")
+	}
+}
