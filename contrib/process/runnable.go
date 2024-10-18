@@ -33,5 +33,5 @@ func (p *process) Run(ctx context.Context) error {
 	defer cancel()
 
 	<-ctx.Done()
-	return ctx.Err()
+	return nil
 }
