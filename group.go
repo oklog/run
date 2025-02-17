@@ -26,9 +26,14 @@ func (g *Group) Add(execute func() error, interrupt func(error)) {
 // When the first actor returns, all others are interrupted.
 // Run only returns when all actors have exited.
 // Run returns the error returned by the first exiting actor.
-func (g *Group) Run() error {
+func (g *Group) Run(opts ...Option) error {
 	if len(g.actors) == 0 {
 		return nil
+	}
+
+	options := new(Options)
+	for _, o := range opts {
+		o(options)
 	}
 
 	// Run each actor.
@@ -43,8 +48,17 @@ func (g *Group) Run() error {
 	err := <-errors
 
 	// Signal all actors to stop.
-	for _, a := range g.actors {
-		a.interrupt(err)
+	switch options.ShutdownOrder {
+	case Original:
+		for _, a := range g.actors {
+			a.interrupt(err)
+		}
+	case Reverse:
+		n := len(g.actors)
+
+		for i := n - 1; i >= 0; i-- {
+			g.actors[i].interrupt(err)
+		}
 	}
 
 	// Wait for all actors to stop.
@@ -54,6 +68,25 @@ func (g *Group) Run() error {
 
 	// Return the original error.
 	return err
+}
+
+type Option func(o *Options)
+
+func WithReverseShutdownOrder() Option {
+	return func(o *Options) {
+		o.ShutdownOrder = Reverse
+	}
+}
+
+type Order int8
+
+const (
+	Original Order = iota
+	Reverse
+)
+
+type Options struct {
+	ShutdownOrder Order
 }
 
 type actor struct {
