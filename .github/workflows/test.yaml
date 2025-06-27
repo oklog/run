@@ -68,7 +68,11 @@ jobs:
         run: staticcheck ./...
 
       - name: Run gofumpt
+        if: matrix.platform != 'windows-latest' # :<
         run: gofumpt -d -e -l .
+
+      - name: Run revive
+        run: revive --formatter=stylish ./...
 
       - name: Run go test
         run: go test -v -race ./...
