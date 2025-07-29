@@ -5,6 +5,8 @@
 // from net.Listeners, or scanning input from a closable io.Reader.
 package run
 
+import "sync"
+
 // Group collects actors (functions) and runs them concurrently.
 // When one actor (function) returns, all actors are interrupted.
 // The zero value of a Group is useful.
@@ -31,29 +33,39 @@ func (g *Group) Run() error {
 		return nil
 	}
 
+	var (
+		wg      sync.WaitGroup
+		once    sync.Once
+		errOnce error
+		done    = make(chan struct{})
+	)
+
 	// Run each actor.
-	errors := make(chan error, len(g.actors))
 	for _, a := range g.actors {
+		wg.Add(1)
 		go func(a actor) {
-			errors <- a.execute()
+			defer wg.Done()
+			if err := a.execute(); err != nil {
+				once.Do(func() {
+					errOnce = err
+					close(done)
+				})
+			}
 		}(a)
 	}
 
-	// Wait for the first actor to stop.
-	err := <-errors
+	<-done
 
 	// Signal all actors to stop.
 	for _, a := range g.actors {
-		a.interrupt(err)
+		a.interrupt(errOnce)
 	}
 
-	// Wait for all actors to stop.
-	for i := 1; i < cap(errors); i++ {
-		<-errors
-	}
+	// Wait for the actors to stop.
+	wg.Wait()
 
 	// Return the original error.
-	return err
+	return errOnce
 }
 
 type actor struct {

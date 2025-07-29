@@ -55,3 +55,66 @@ func TestMany(t *testing.T) {
 		t.Errorf("timeout")
 	}
 }
+
+func TestGroup_Run_AllActorsExecuteAndInterruptProperly(t *testing.T) {
+	var (
+		mock1Msg string
+		mock2Msg string
+		errMsg1  string
+		errMsg2  string
+	)
+
+	var g run.Group
+
+	// Actor 1: returns error
+	g.Add(func() error {
+		return errors.New("got error")
+	}, func(err error) {
+		errMsg1 = err.Error()
+	})
+
+	// Actor 2: completes successfully
+	g.Add(func() error {
+		return nil
+	}, func(err error) {
+		mock1Msg = "interrupted mock1"
+	})
+
+	// Actor 3: returns another error
+	g.Add(func() error {
+		return errors.New("got error 2")
+	}, func(err error) {
+		errMsg2 = err.Error()
+	})
+
+	// Actor 4: completes successfully
+	g.Add(func() error {
+		return nil
+	}, func(err error) {
+		mock2Msg = "interrupted mock2"
+	})
+
+	// Act
+	err := g.Run()
+
+	// Assert
+	if err == nil {
+		t.Fatal("expected non-nil error from Run, got nil")
+	}
+
+	if errMsg1 != "got error" && errMsg1 != "got error 2" {
+		t.Errorf("expected errMsg1 to be 'got error', got '%s'", errMsg1)
+	}
+
+	if errMsg2 != "got error 2" && errMsg2 != "got error" {
+		t.Errorf("expected errMsg2 to be 'got error 2', got '%s'", errMsg2)
+	}
+
+	if mock1Msg != "interrupted mock1" {
+		t.Errorf("expected mock1Msg to be 'interrupted mock1', got '%s'", mock1Msg)
+	}
+
+	if mock2Msg != "interrupted mock2" {
+		t.Errorf("expected mock2Msg to be 'interrupted mock2', got '%s'", mock2Msg)
+	}
+}
