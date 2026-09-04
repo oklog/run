@@ -58,6 +58,27 @@ func TestSignalError(t *testing.T) {
 	}
 }
 
+// errors.As must populate a value-typed SignalError target, not merely
+// report a match; #27 made it return true without ever assigning.
+func TestSignalErrorAsAssignsTarget(t *testing.T) {
+	testc := make(chan os.Signal, 1)
+	ctx := putTestSigChan(context.Background(), testc)
+
+	var rg Group
+	rg.Add(SignalHandler(ctx, os.Interrupt))
+	testc <- os.Interrupt
+	err := rg.Run()
+
+	var target SignalError
+	if want, have := true, errors.As(err, &target); want != have {
+		t.Fatalf("errors.As(err, &target): want %v, have %v", want, have)
+	}
+
+	if want, have := os.Interrupt, target.Signal; want != have {
+		t.Errorf("target.Signal: want %v, have %v (errors.As reported success but did not assign the target)", want, have)
+	}
+}
+
 func TestSignalHandlerNil(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var rg Group

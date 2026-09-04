@@ -82,14 +82,15 @@ func (e SignalError) Is(err error) bool {
 }
 
 // As fixes a design error in the SignalError type, so that errors.As with the
-// literal `&SignalError{}` will return true.
+// literal `&SignalError{}` will return true and, per the errors.As contract,
+// populate target with the underlying signal.
 func (e SignalError) As(target interface{}) bool {
-	switch target.(type) {
-	case *SignalError, SignalError:
-		return true
-	default:
+	t, ok := target.(*SignalError)
+	if !ok {
 		return false
 	}
+	*t = e
+	return true
 }
 
 // ErrSignal is returned by SignalHandler when a signal triggers termination.
